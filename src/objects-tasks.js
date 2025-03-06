@@ -356,32 +356,127 @@ function group(array, keySelector, valueSelector) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  elementValue: null,
+  idValue: null,
+  classes: [],
+  attrValue: null,
+  pseudoClasses: [],
+  pseudoElementValue: null,
+  subElements: null,
+
+  makeClone() {
+    return { ...this, ...JSON.parse(JSON.stringify(this)) };
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    if (this.idValue) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    if (this.elementValue) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    const clone = this.makeClone();
+    clone.elementValue = value;
+    return clone;
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    if (this.classes.length || this.pseudoElementValue) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    if (this.idValue) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    const clone = this.makeClone();
+    clone.idValue = value;
+    return clone;
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    if (this.attrValue) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    const clone = this.makeClone();
+    clone.classes.push(value);
+    return clone;
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    if (this.pseudoClasses.length) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    const clone = this.makeClone();
+    clone.attrValue = value;
+    return clone;
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    if (this.pseudoElementValue) {
+      throw new Error(
+        'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element'
+      );
+    }
+    const clone = this.makeClone();
+    clone.pseudoClasses.push(value);
+    return clone;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const clone = this.makeClone();
+    if (clone.pseudoElementValue) {
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    }
+    clone.pseudoElementValue = value;
+    return clone;
+  },
+
+  combine(selector1, combinator, selector2) {
+    const clone = this.makeClone();
+    clone.subElements = [combinator, selector1, selector2];
+    return clone;
+  },
+  stringify() {
+    const result = [];
+    if (this.elementValue) {
+      result.push(this.elementValue);
+    }
+    if (this.idValue) {
+      result.push(`#${this.idValue}`);
+    }
+    if (this.classes.length) {
+      result.push(`.${this.classes.join('.')}`);
+    }
+    if (this.attrValue) {
+      result.push(`[${this.attrValue}]`);
+    }
+    if (this.pseudoClasses.length) {
+      result.push(`:${this.pseudoClasses.join(':')}`);
+    }
+    if (this.pseudoElementValue) {
+      result.push(`::${this.pseudoElementValue}`);
+    }
+
+    if (this.subElements) {
+      const [combinator, selector1, selector2] = this.subElements;
+      result.push(
+        `${selector1.stringify()} ${combinator} ${selector2.stringify()}`
+      );
+    }
+    return result.join('');
   },
 };
 
